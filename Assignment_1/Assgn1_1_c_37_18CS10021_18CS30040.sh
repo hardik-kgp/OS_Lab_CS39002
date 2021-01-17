@@ -1,0 +1,1 @@
+awk '{print $'$1'}' 1d_input.txt|tr A-Z' ' a-z'\n'|sort|uniq -c|awk '{print $2 " " $1}'|sort -r -k 2,2 > 1e_output_$1_column.freq
