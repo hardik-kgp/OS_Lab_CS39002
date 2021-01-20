@@ -4,3 +4,5 @@ gcd(){
 }
 IFS=',' read -a array <<< $1
 for i in ${array[@]};do array[0]=$(gcd ${array[0]} $i) ;done;echo ${array[0]}
+
+#confusion with input check, and need to understand gcd part

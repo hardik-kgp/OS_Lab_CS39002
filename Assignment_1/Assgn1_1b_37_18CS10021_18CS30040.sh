@@ -3,6 +3,6 @@ for file in $(ls ../1.b.files)
 do
     cat "../1.b.files/${file}" | sort -n -o "1.b.files.out/${file}"
 done
-cat ../1.b.files/* | sort -r -o "1.b.out.txt"
+sort -mnr ../1.b.files/* -o "1.b.out.txt"
 
-#takes 71s
+#tested but mayneed to check again the file
