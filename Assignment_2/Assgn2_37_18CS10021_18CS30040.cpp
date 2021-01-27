@@ -24,6 +24,30 @@ vector<string> mystrtok(string s, char c){
     return tokens;
 }
 
+vector <string> built_ins {"cd", "exit", "help"};
+
+int shell_cd(vector <string> args){
+    /*Function to change directory*/
+    if(chdir(args[1].c_str()) !=0){
+        perror("Invalid path");
+    }
+    return EXIT_SUCCESS;
+}
+
+int shell_help(vector <string> args){
+    /*Function to print shell help*/
+    printf("Shell built-in commands: \n");
+    for(auto built_in: built_ins) printf("%s\n", built_in.c_str());
+    return EXIT_SUCCESS;
+}
+
+int shell_exit(vector <string> args){
+    /*Function to exit shell*/
+    exit(EXIT_SUCCESS);
+    return EXIT_SUCCESS;
+}
+
+int (*built_in_func[]) (vector <string>) = {&shell_cd, &shell_exit, &shell_help};
 class Command{
     /*Class to store data about the command*/
 public:
@@ -32,6 +56,7 @@ public:
     string fin;             // stores name of input file, if any
     string fout;            // stores name of output file, if any
     int bkg;                // flag to denote, if to run a process in background or not
+    int built_in;
     Command(string);
     void parse();
     void io_redirect();
@@ -44,6 +69,7 @@ Command::Command(string cmd){
     fin = "";
     fout = "";
     bkg = 0;
+    built_in = -1;
 }
 
 void Command::parse(){
@@ -74,6 +100,10 @@ void Command::parse(){
                 args.push_back(token);
             }
         }
+    }
+    for(int i=0; i<built_ins.size(); i++){
+        if(strcmp(args[0].c_str(), built_ins[i].c_str()) == 0)
+            built_in = i;
     }
     return;
 }
@@ -141,19 +171,25 @@ void shell_loop(){
         getline(cin, line);
         vector<Command> cmds = split_line(line);
         if (cmds.size() == 1){ // single command
-            pid_t pid = fork(); // child process
-            if (pid == 0){
-                cmds[0].io_redirect(); // execute command
-                cmds[0].execute();
-                exit(EXIT_FAILURE); // exit child process incase of failure
+            /*check for builtins*/
+            if(cmds[0].built_in != -1){
+                (*built_in_func[cmds[0].built_in])(cmds[0].args);
             }
             else{
-                if (cmds[0].bkg == 0){
-                    wait(&status); // wait if child not a background process
+                pid_t pid = fork(); // child process
+                if (pid == 0){
+                    cmds[0].io_redirect(); // execute command
+                    cmds[0].execute();
+                    exit(EXIT_FAILURE); // exit child process incase of failure
                 }
                 else{
-                    cout << "[BG] " << pid << endl;
-                }
+                    if (cmds[0].bkg == 0){
+                        wait(&status); // wait if child not a background process
+                    }
+                    else{
+                        cout << "[BG] " << pid << endl;
+                    }
+                }   
             }
         }
         else {
@@ -178,6 +214,7 @@ void shell_loop(){
                         close(newFD[1]);
                     }
                     cmds[i].execute();
+                    exit(EXIT_FAILURE);
                 }
                 else{
                     if (cmds[i].bkg != 0){
@@ -194,7 +231,7 @@ void shell_loop(){
                 }
             }
 
-            if (cmds.back().bkg == 0){ // wait if child not a background process
+            if (cmds.back().bkg == 0){
                 while (wait(&status) > 0)
                     ;
             }
