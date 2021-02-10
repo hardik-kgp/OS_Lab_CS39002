@@ -50,17 +50,17 @@ int shell_exit(vector <string> args){
 int (*built_in_func[]) (vector <string>) = {&shell_cd, &shell_exit, &shell_help};
 class Command{
     /*Class to store data about the command*/
-public:
-    string cmd;             // stores the command string
-    vector<string> args;    // stores the args to execvp
-    string fin;             // stores name of input file, if any
-    string fout;            // stores name of output file, if any
-    int bkg;                // flag to denote, if to run a process in background or not
-    int built_in;
-    Command(string);
-    void parse();
-    void io_redirect();
-    void execute();
+    public:
+        string cmd;             // stores the command string
+        vector<string> args;    // stores the args to execvp
+        string fin;             // stores name of input file, if any
+        string fout;            // stores name of output file, if any
+        int bkg;                // flag to denote, if to run a process in background or not
+        int built_in;
+        Command(string);
+        void parse();
+        void io_redirect();
+        void execute();
 };
 
 Command::Command(string cmd){
@@ -170,15 +170,16 @@ void shell_loop(){
         printf(">> ");  //shell prompt
         getline(cin, line);
         vector<Command> cmds = split_line(line);
-        if(cmds.size() < 1) continue;
+        if(cmds.size() == 0){
+            continue;
+        }
         if (cmds.size() == 1){ // single command
             /*check for builtins*/
             if(cmds[0].built_in != -1){
                 (*built_in_func[cmds[0].built_in])(cmds[0].args);
             }
             else{
-                pid_t pid, wpid;
-                pid = fork(); // child process
+                pid_t pid = fork(); // child process
                 if (pid == 0){
                     cmds[0].io_redirect(); // execute command
                     cmds[0].execute();
@@ -186,9 +187,7 @@ void shell_loop(){
                 }
                 else{
                     if (cmds[0].bkg == 0){
-                        do {
-                            wpid = waitpid(pid, &status, WUNTRACED);
-                        }while (!WIFEXITED(status) && !WIFSIGNALED(status)); // wait if child not a background process
+                        wait(&status); // wait if child not a background process
                     }
                     else{
                         cout << "[BG] " << pid << endl;
@@ -199,11 +198,10 @@ void shell_loop(){
         else {
             int num_cmds = cmds.size();
             int newFD[2], FD[2];
-            pid_t pid, wpid;
             for (int i = 0; i < num_cmds; i++){ // iterating through commands
                 if (i + 1 < num_cmds)
                     pipe(newFD); // creating pipe
-                pid = fork(); //creating child process
+                pid_t pid = fork(); //creating child process
                 if (pid == 0){
                     if (i == 0 || i + 1 == num_cmds){ // redirect to i/o
                         cmds[i].io_redirect();
@@ -237,10 +235,7 @@ void shell_loop(){
             }
 
             if (cmds.back().bkg == 0){
-                do 
-                {
-                    wpid = waitpid(pid, &status, WUNTRACED);
-                } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+                while (wait(&status) > 0);
             }
         }
     } while (true);
