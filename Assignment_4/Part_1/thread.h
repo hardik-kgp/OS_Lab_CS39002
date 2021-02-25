@@ -89,8 +89,9 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
-    // time after which we need to wake the thread
-    int64_t wakeup_at;
+    int64_t wakeup_at;                  /* Time after which we need to wake the thread */
+    int64_t nice;                       /* Nice value */
+    int64_t recent_cpu;                 /* CPU time received recently*/
     
 
     /* Shared between thread.c and synch.c. */
@@ -141,6 +142,10 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+/*Function for wakeup thread*/
+static void wakeup_thread_work (void *aux UNUSED);
+
+/*Functions for MLFQS scheduler*/
 
 void thread_sleep(int64_t, int);
 
