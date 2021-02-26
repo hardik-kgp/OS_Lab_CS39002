@@ -208,7 +208,7 @@ increase_recent_cpu(void)
   struct thread *t = thread_current();
   if(t == wakeup_thread || t == mlfqs_thread || t == idle_thread)
     return;
-  t->recent_cpu = t->recent_cpu+1; 
+  t->recent_cpu = add_xn(t->recent_cpu, 1); 
 }
 
 /* Prints thread statistics. */
@@ -788,12 +788,12 @@ cal_load_avg(void)
   if(!(t == wakeup_thread || t == mlfqs_thread || t == idle_thread))
     num_threads++;
   
-  if(t == mlfqs_thread && mlfqs_thread->status == THREAD_READY)
+  if(mlfqs_thread && mlfqs_thread->status == THREAD_READY)
     num_threads--;
-  if(t == wakeup_thread && mlfqs_thread->status == THREAD_READY)
+  if(wakeup_thread && wakeup_thread->status == THREAD_READY)
     num_threads--;
   
-  int term1 = mult_xy(load_avg, div_xy(59, 60));
+  int term1 = mult_xy(div_xy(59, 60), load_avg);
   int term2 = div_xy(num_threads, 60);
   load_avg = add_xy(term1, term2);
 }
@@ -802,12 +802,11 @@ cal_load_avg(void)
 void
 mlfqs_reschedule(void)
 {
-  struct list_elem *e;
-  for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e))
+  for (struct list_elem *e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e))
   {
-    if(e == wakeup_thread || e == mlfqs_thread || e == idle_thread)
+    struct thread *t = list_entry (e, struct thread, elem);
+    if(t == wakeup_thread || t == mlfqs_thread || t == idle_thread)
       continue;
-    struct thread *t = list_entry (e, struct thread, allelem);
     update_recent_cpu(t);
     update_mlfqs_priority(t);
   }
