@@ -190,8 +190,11 @@ thread_tick (void)
   if(thread_mlfqs && currentTime > 0){
     increase_recent_cpu();
 
-    if(currentTime%TIMER_FREQ && mlfqs_thread && mlfqs_thread->status == THREAD_BLOCKED)
-      thread_unblock(mlfqs_thread);
+    if(currentTime%TIMER_FREQ == 0)
+    {
+      if(mlfqs_thread && mlfqs_thread->status == THREAD_BLOCKED)
+        thread_unblock(mlfqs_thread);
+    }
     else if(currentTime%PRI_FREQ == 0)
       update_mlfqs_priority(thread_current());
   }
@@ -801,8 +804,9 @@ cal_load_avg(void)
 /*Function to reschedule using mlfqs*/
 void
 mlfqs_reschedule(void)
-{
-  for (struct list_elem *e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e))
+{ 
+  struct list_elem *e = list_begin(&all_list);
+  for (; e != list_end(&all_list); e = list_next(e))
   {
     struct thread *t = list_entry (e, struct thread, elem);
     if(t == wakeup_thread || t == mlfqs_thread || t == idle_thread)
