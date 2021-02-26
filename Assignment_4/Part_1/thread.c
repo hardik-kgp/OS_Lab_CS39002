@@ -205,7 +205,7 @@ thread_tick (void)
 void
 increase_recent_cpu(void)
 {
-  struct thread *t = current_thread();
+  struct thread *t = thread_current();
   if(t == wakeup_thread || t == mlfqs_thread || t == idle_thread)
     return;
   t->recent_cpu = t->recent_cpu+1; 
@@ -802,7 +802,8 @@ cal_load_avg(void)
 void
 mlfqs_reschedule(void)
 {
-  for (struct list_elem *e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e))
+  struct list_elem *e;
+  for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e))
   {
     if(e == wakeup_thread || e == mlfqs_thread || e == idle_thread)
       continue;

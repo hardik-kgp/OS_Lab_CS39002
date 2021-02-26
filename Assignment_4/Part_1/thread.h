@@ -142,11 +142,6 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-/*Function for wakeup thread*/
-static void wakeup_thread_work (void *aux UNUSED);
-
-/*Functions for MLFQS scheduler*/
-
 void thread_sleep(int64_t, int);
 
 #endif /* threads/thread.h */
