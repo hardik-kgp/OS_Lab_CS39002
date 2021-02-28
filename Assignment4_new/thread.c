@@ -446,7 +446,7 @@ thread_set_nice (int nice UNUSED)
   struct thread *th = thread_current();
   enum intr_level old_level = intr_disable();
   th->nice = clip(nice, NICE_MIN, NICE_MAX);
-  thread_update_priority(th);
+  update_priority(th);
   struct thread *th_max = get_max_priority();
   if (th_max->priority != -1 &&  comp_th_pri(th_max, th, NULL)) thread_yield();
   intr_set_level(old_level);
@@ -728,7 +728,7 @@ void update_all_priority()
   _update_priority = false;
   struct list_elem *e;
   for (e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e)){
-    thread_update_priority(list_entry(e, struct thread, allelem));
+    update_priority(list_entry(e, struct thread, allelem));
   }
 }
 
