@@ -81,7 +81,6 @@ static struct thread *wakeup_thread;
 static struct thread *mlfqs_thread;
 
 int load_avg;
-static void wakeup_threads(void *aux UNUSED);
 void update_ready_list(void);
 static bool comp_pri(const struct list_elem *,const struct list_elem *,void *aux UNUSED);
 static void mlfqs_thread_work(void *AUX);
@@ -688,8 +687,9 @@ static void mlfqs_thread_work(void *AUX) /* Function to handle scheduler thread*
     for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e))
     {
       struct thread *t = list_entry (e, struct thread, allelem);
-      if(t == wakeup_thread || t == idle_thread || t == mlfqs_thread) continue;
-    mlfqs_update_priority(t);
+      if(t == wakeup_thread || t == idle_thread || t == mlfqs_thread)
+      continue;
+      mlfqs_update_priority(t);
     }
     update_ready_list();
     old_level = intr_disable();
@@ -751,7 +751,7 @@ void cal_load_avg(void)
 }
 
 void update_recent_cpu(struct thread *t){
-  if(t == wakeup_thread || t == idle_thread || t == mlfqs_thread) continue;
+  if(t == wakeup_thread || t == idle_thread || t == mlfqs_thread) return;
   int term1 = mult_xn (2, load_avg);
   int term2 = term1 + convertN (1);
   term1 = mult_xy (term1, t->recent_cpu);
