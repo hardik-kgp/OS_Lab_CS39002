@@ -75,10 +75,10 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 /*Pointer of Thread that wakes up other threads*/
-static struct thread *wake_up_thread;
+static struct thread *wakeup_thread;
 
 /* for updating priorities of threads */
-static struct thread *update_thread;
+static struct thread *mlfqs_thread;
 
 int load_avg;
 static void wake_up_threads(void *aux UNUSED);
@@ -762,7 +762,7 @@ void update_recent_cpu(struct thread *t){
 // for updating the priority of threads in mlfqs
 void mlfqs_update_priority (struct thread *t)
 {
-  if (t == idle_thread || t == wake_up_thread || t == update_thread) return;
+  if (t == idle_thread || t == wake_up_thread || t == mlfqs_thread) return;
   
   int term1 = convertN (PRI_MAX);
   int term2 = div_xn (t->recent_cpu, 4);
