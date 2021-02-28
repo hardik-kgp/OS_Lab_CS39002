@@ -86,7 +86,7 @@ static void init_thread (struct thread *, const char *name, int priority);
 static bool is_thread (struct thread *) UNUSED;
 static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
-void thread_schedule_tail (struct thread *prev);
+void schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 static int next_wakeup_time;    // Time instance when wakeup_thread is supposed to be waken up
@@ -128,13 +128,13 @@ thread_init (void)
 /* custom coparator to compare two threads based on their sleep time sleep time is defined as current_time + sleep_duration */
 static bool before(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
 {
-	return list_entry(a,struct thread,elem)->wakeup_at < list_entry(b,struct thread,elem)->wakeup_at;
+  return list_entry(a,struct thread,elem)->wakeup_at < list_entry(b,struct thread,elem)->wakeup_at;
 }
 
 /* custom coparator to compare two threads based on their priority */
 static bool comp_pri(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
 {
-	return list_entry(a,struct thread,elem)->priority>list_entry(b,struct thread,elem)->priority; 
+  return list_entry(a,struct thread,elem)->priority>list_entry(b,struct thread,elem)->priority; 
 }
 
 
@@ -182,7 +182,7 @@ thread_tick (void)
   int64_t currentTime = timer_ticks();
   
   if(currentTime == next_wakeup_time)
-	  thread_unblock(wakeup_thread);
+    thread_unblock(wakeup_thread);
 
   if(thread_mlfqs && currentTime > 0){
     increase_recent_cpu();
@@ -609,7 +609,7 @@ next_thread_to_run (void)
    After this function and its caller returns, the thread switch
    is complete. */
 void
-thread_schedule_tail (struct thread *prev)
+schedule_tail (struct thread *prev)
 {
   struct thread *cur = running_thread ();
   
@@ -658,7 +658,7 @@ schedule (void)
 
   if (cur != next)
     prev = switch_threads (cur, next);
-  thread_schedule_tail (prev);
+  schedule_tail (prev);
 }
 
 /* Returns a tid to use for a new thread. */
@@ -697,21 +697,21 @@ void thread_restore(void)
 void thread_sleep(int64_t wakeup_at, int currentTime)
 {
   // disabling the interrupts
-	enum intr_level old_int=intr_disable();
+  enum intr_level old_int=intr_disable();
   struct thread *th = thread_current();
 
   /* if the current time is greater than the time when it is supposed to wake up, then it doesn't have to sleep. */
   if(currentTime >= wakeup_at) return;
-	
+  
   ASSERT(th->status == THREAD_RUNNING); 
-	th->wakeup_at = wakeup_at;       // setting the wakeup time of the thread.
-	list_insert_ordered(&sleeper_list, &(th->elem), before, NULL);   // insert it to the sleeper list
+  th->wakeup_at = wakeup_at;       // setting the wakeup time of the thread.
+  list_insert_ordered(&sleeper_list, &(th->elem), before, NULL);   // insert it to the sleeper list
   
   if(!list_empty(&sleeper_list))next_wakeup_time = list_entry(list_begin(&sleeper_list),struct thread,elem)->wakeup_at;
-	
-  thread_block();	
+  
+  thread_block(); 
   //enabling the interrupts
-	intr_set_level(old_int);
+  intr_set_level(old_int);
 } 
 
 /* wakes up the next sleeping thread if it's wakeup time is same as the current running thread.*/
