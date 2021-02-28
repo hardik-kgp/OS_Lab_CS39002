@@ -125,18 +125,14 @@ thread_init (void)
   initial_thread->tid = allocate_tid ();
 }
 
-
-/* custom coparator to compare two threads based on their sleep time
- sleep time is defined as current_time + sleep_duration */
-static bool
-before(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
+/* custom coparator to compare two threads based on their sleep time sleep time is defined as current_time + sleep_duration */
+static bool before(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
 {
 	return list_entry(a,struct thread,elem)->wakeup_at < list_entry(b,struct thread,elem)->wakeup_at;
 }
 
 /* custom coparator to compare two threads based on their priority */
-static bool
-comp_pri(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
+static bool comp_pri(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
 {
 	return list_entry(a,struct thread,elem)->priority>list_entry(b,struct thread,elem)->priority; 
 }
@@ -197,6 +193,7 @@ thread_tick (void)
     }
     else if(currentTime%PRI_FREQ == 0)
       update_mlfqs_priority(thread_current());
+      // if(thread_current()->priority != PRI_MIN) thread_current()->priority = thread_current()->priority - 1;
   }
 
   /* Enforce preemption. */
@@ -391,7 +388,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_insert_ordered (&ready_list, &cur->elem,comp_pri,NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -438,20 +435,20 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  enum intr_level old_level = intr_disable();
+  // enum intr_level old_level = intr_disable();
   thread_current()->nice = nice;
   update_mlfqs_priority(thread_current());
   check_priority();
-  intr_set_level(old_level);
+  // intr_set_level(old_level);
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  enum intr_level old_level = intr_disable();
+  // enum intr_level old_level = intr_disable();
   int temp = thread_current()->nice;
-  intr_set_level(old_level);
+  // intr_set_level(old_level);
   return temp;
 }
 
@@ -741,16 +738,18 @@ wakeup_thread_work (void *AUX UNUSED)
 void
 update_mlfqs_priority(struct thread *t)
 {
+  enum intr_level old_level = intr_disable ();
   if(t == wakeup_thread || t == mlfqs_thread || t == idle_thread)
     return;
   int temp1 = convertN(PRI_MAX);
   int temp2 = div_xn(t->recent_cpu, 4);
   int temp3 = convertN(mult_xn(t->nice, 2));
   int temp = sub_xy(temp1, add_xy(temp2, temp3));
-
+  temp = convertX_near(temp);
   t->priority = (temp<PRI_MIN) ? PRI_MIN : (temp>PRI_MAX ? PRI_MAX : temp);
   // update_ready_list();
   // if(t == current_thread() && t != list_front(&ready_list)) thread_yield();
+  intr_set_level (old_level);
 }
 
 /*Function to check if the current thread has high priority. If not yield*/
@@ -774,7 +773,7 @@ update_recent_cpu(struct thread *t)
   if(t == wakeup_thread || t == mlfqs_thread || t == idle_thread)
     return;
   int term1 = mult_xn(2, load_avg);
-  int term2 = add_xy(term1, convertN(1));
+  int term2 = term1 + convertN(1);
   term1 = mult_xy(term1, t->recent_cpu);
   term1 = div_xy(term1, term2);
 
