@@ -86,6 +86,7 @@ void cal_load_avg(void); /* Calculate average value of load*/
 
 /* Custom comparator to compare the priority of two threads*/
 static bool comp_pri(struct list_elem *a, struct list_elem *b, void *aux UNUSED);
+static bool comp_th_pri(struct thread *a, struct thread *b, void *aux UNUSED);
 static int clip(int x, int min, int max); /* Clip x to [min, max] range*/
 
 /* Initializes the threading system by transforming the code
@@ -111,7 +112,8 @@ thread_init (void)
   list_init (&all_list);
 
   if(thread_mlfqs){
-    for(int i=PRI_MIN; i<=PRI_MAX; i++) list_init(&ready_lists[i]);
+    int i;
+    for(i=PRI_MIN; i<=PRI_MAX; i++) list_init(&ready_lists[i]);
   }
 
   load_avg = 0; /* Initial load is zero */
@@ -246,7 +248,7 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
-  if( t!= idle_thread && comp_pri(t, thread_current(), NULL))
+  if( t!= idle_thread && comp_th_pri(t, thread_current(), NULL))
     thread_yield();
   
   intr_set_level(old_level);
@@ -424,7 +426,7 @@ thread_set_priority (int new_priority)
   enum intr_level old_level = intr_disable();
   if (!list_empty(&ready_list)){
     struct thread *front = list_entry(list_front(&ready_list), struct thread, elem);
-    if (comp_pri(front, thread_current(), NULL)) thread_yield();
+    if (comp_th_pri(front, thread_current(), NULL)) thread_yield();
   }
   intr_set_level(old_level);
 }
@@ -442,10 +444,10 @@ thread_set_nice (int nice UNUSED)
 {
   struct thread *th = thread_current();
   enum intr_level old_level = intr_disable();
-  th->nice = clamp(nice, NICE_MIN, NICE_MAX);
+  th->nice = clip(nice, NICE_MIN, NICE_MAX);
   thread_update_priority(th);
   struct thread *th_max = get_max_priority();
-  if (th_max->priority != -1 &&  comp_pri(th_max, th, NULL)) thread_yield();
+  if (th_max->priority != -1 &&  comp_th_pri(th_max, th, NULL)) thread_yield();
   intr_set_level(old_level);
 }
 
@@ -710,7 +712,7 @@ void update_priority(struct thread *t)
 {
   if (t != wakeup_thread && t != mlfqs_thread && t != idle_thread){
     int temp = add_xn(div_xn(t->recent_cpu, 4), 2 * t->nice);
-    t->priority = clamp(convertX_zero(sub_xn(PRI_MAX, temp)), PRI_MIN, PRI_MAX);
+    t->priority = clip(convertX_zero(sub_xn(PRI_MAX, temp)), PRI_MIN, PRI_MAX);
   }
   if (t->status == THREAD_READY)
   {
@@ -746,13 +748,14 @@ void update_recent_cpu(void)
   }
 }
 
-struct thread *max_priority(void)
+struct thread *get_max_priority(void)
 {
-  for (int i = PRI_MAX; i >= PRI_MIN; i--)
+  int i;
+  for (i = PRI_MAX; i >= PRI_MIN; i--)
   {
     struct list *temp_list = &ready_lists[i];
     if (!list_empty(temp_list))
-      return list_entry(list_pop_front(&temp_list), struct thread, mlfq_elem);
+      return list_entry(list_begin(&temp_list), struct thread, mlfq_elem);
   }
   return NULL;
 }
@@ -776,12 +779,17 @@ void mlfqs_thread_work(void *arg UNUSED)
   }
 }
 
-static bool thread_compare_priorities(struct list_elem *a, struct list_elem *b, void *aux UNUSED)
+static bool comp_pri(struct list_elem *a, struct list_elem *b, void *aux UNUSED)
 {
   return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
 }
 
-int clamp(int x, int MAX, int MIN){
+static bool comp_th_pri(struct thread *a, struct thread *b, void *aux UNUSED)
+{
+  return a->priority > b->priority;
+}
+
+int clip(int x, int MAX, int MIN){
   if(x < MIN) return MIN;
   else if(x > MAX) return MAX;
   else return x;
