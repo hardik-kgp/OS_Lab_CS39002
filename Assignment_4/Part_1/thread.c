@@ -11,7 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
-#include "arithmetic.h"
+#include "fixed_point.h"
 #include "devices/timer.h"
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -68,7 +68,7 @@ static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
 
-static void wakeup_thread_work (void *aux UNUSED);          /* the function which is called when wakeup thread is running. */
+static void timer_wakeup (void *aux UNUSED);          /* the function which is called when wakeup thread is running. */
 static void mlfqs_thread_work (void *aux UNUSED);          /* the function which is called when mlfqs thread is running. */
 
 /*Functions for MLFQS*/
@@ -155,7 +155,7 @@ thread_start (void)
   sema_down (&idle_started);
   next_wakeup_time = -1;
   load_avg = 0;
-  thread_create("wakeup_thread", PRI_MAX, wakeup_thread_work, NULL);
+  thread_create("wakeup_thread", PRI_MAX, timer_wakeup, NULL);
   thread_create("mlfqs_thread", PRI_MAX, mlfqs_thread_work, NULL);
 }
 
@@ -701,7 +701,7 @@ void thread_sleep(int64_t wakeup_at, int currentTime)
 
 
 static void
-wakeup_thread_work (void *AUX UNUSED) 
+timer_wakeup (void *AUX UNUSED) 
 {
   wakeup_thread = thread_current ();
   
