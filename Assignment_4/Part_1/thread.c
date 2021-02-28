@@ -90,7 +90,7 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 static int next_wakeup_time;    // Time instance when wakeup_thread is supposed to be waken up
-static int time_count = 0;            // Variable to store time
+static int time = 0;            // Variable to store time
 static int load_avg;            // System load average
 static struct thread *wakeup_thread;  // wakeup_thread to unblock the sleeping threads
 static struct thread *mlfqs_thread;   // wakeup_thread to schedule threads
@@ -128,13 +128,13 @@ thread_init (void)
 /* custom coparator to compare two threads based on their sleep time sleep time is defined as current_time + sleep_duration */
 static bool before(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
 {
-	return list_entry(a,struct thread,elem)->wakeup_at < list_entry(b,struct thread,elem)->wakeup_at;
+  return list_entry(a,struct thread,elem)->wakeup_at < list_entry(b,struct thread,elem)->wakeup_at;
 }
 
 /* custom coparator to compare two threads based on their priority */
 static bool comp_pri(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
 {
-	return list_entry(a,struct thread,elem)->priority>list_entry(b,struct thread,elem)->priority; 
+  return list_entry(a,struct thread,elem)->priority>list_entry(b,struct thread,elem)->priority; 
 }
 
 
@@ -144,8 +144,6 @@ void
 thread_start (void) 
 {
   /* Create the idle thread. */
-  next_wakeup_time = -1;
-  load_avg = 0;
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
@@ -155,7 +153,8 @@ thread_start (void)
 
   /* Wait for the idle thread to initialize idle_thread. */
   sema_down (&idle_started);
-  
+  next_wakeup_time = -1;
+  load_avg = 0;
   thread_create("wakeup_thread", PRI_MAX, timer_wakeup, NULL);
   thread_create("mlfqs_thread", PRI_MAX, mlfqs_thread_work, NULL);
 }
@@ -165,7 +164,7 @@ thread_start (void)
 void
 thread_tick (void) 
 {
-  time_count++;
+  time++;
   struct thread *t = thread_current ();
 
   /* Update statistics. */
@@ -182,7 +181,7 @@ thread_tick (void)
   int64_t currentTime = timer_ticks();
   
   if(currentTime == next_wakeup_time)
-	  thread_unblock(wakeup_thread);
+    thread_unblock(wakeup_thread);
 
   if(thread_mlfqs && currentTime > 0){
     increase_recent_cpu();
@@ -209,7 +208,7 @@ increase_recent_cpu(void)
   struct thread *t = thread_current();
   if(t == wakeup_thread || t == mlfqs_thread || t == idle_thread)
     return;
-  thread_current()->recent_cpu = add_xn(thread_current()->recent_cpu, 1); 
+  t->recent_cpu = add_xn(t->recent_cpu, 1); 
 }
 
 /* Prints thread statistics. */
@@ -318,7 +317,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_insert_ordered (&ready_list, &t->elem,comp_pri, NULL);
+  list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -436,11 +435,11 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  enum intr_level old_level = intr_disable();
+  // enum intr_level old_level = intr_disable();
   thread_current()->nice = nice;
   update_mlfqs_priority(thread_current());
   check_priority();
-  intr_set_level(old_level);
+  // intr_set_level(old_level);
 }
 
 /* Returns the current thread's nice value. */
@@ -557,10 +556,8 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-  t->initial_priority = t->priority;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
-  t->lock_seeking = NULL;
   t->nice = 0;
   t->recent_cpu = 0;
 }
@@ -680,60 +677,31 @@ allocate_tid (void)
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 
-/* Store the original priority of the thread and set it's priority to max temporarily till it wakes up */
-void thread_set_temporarily_up(void)
-{
-  thread_current()->orig_priority = thread_current()->priority;    /* store the original priority of the thread before setting it to max temporaroly*/
-  thread_current()->priority=PRI_MAX;
-}
-
-/* Restores the original priority of the thread which just wakes up from sleep*/
-void thread_restore(void)
-{
-  thread_current()->priority = thread_current()->orig_priority;
-}
-
 
 void thread_sleep(int64_t wakeup_at, int currentTime)
 {
   // disabling the interrupts
-	enum intr_level old_int=intr_disable();
+  enum intr_level old_int=intr_disable();
   struct thread *th = thread_current();
 
   /* if the current time is greater than the time when it is supposed to wake up, then it doesn't have to sleep. */
   if(currentTime >= wakeup_at) return;
-	
+  
   ASSERT(th->status == THREAD_RUNNING); 
-	th->wakeup_at = wakeup_at;       // setting the wakeup time of the thread.
-	list_insert_ordered(&sleeper_list, &(th->elem), before, NULL);   // insert it to the sleeper list
+  th->wakeup_at = wakeup_at;       // setting the wakeup time of the thread.
+  list_insert_ordered(&sleeper_list, &(th->elem), before, NULL);   // insert it to the sleeper list
   
   if(!list_empty(&sleeper_list))next_wakeup_time = list_entry(list_begin(&sleeper_list),struct thread,elem)->wakeup_at;
-	
-  thread_block();	
+  
+  thread_block(); 
   //enabling the interrupts
-	intr_set_level(old_int);
+  intr_set_level(old_int);
 } 
 
-/* wakes up the next sleeping thread if it's wakeup time is same as the current running thread.*/
-void
-set_next_wakeup(void)
-{
-  if(!list_empty(&sleeper_list)) // sleeper list is not empty
-  {
-    struct thread * th = thread_current(); // current running thread
-    struct thread * th2 = list_entry(list_begin(&sleeper_list),struct thread,elem); // thread corresponding to the head of the sleeper list
 
-    if(th2->wakeup_at <= th->wakeup_at)
-    {
-      list_pop_front(&sleeper_list);
-      thread_unblock(th2);
-    }
-  }
-  return;
-}
 
 static void
-timer_wakeup (void *AUX) 
+timer_wakeup (void *AUX UNUSED) 
 {
   wakeup_thread = thread_current ();
   
@@ -770,18 +738,18 @@ timer_wakeup (void *AUX)
 void
 update_mlfqs_priority(struct thread *t)
 {
-  // enum intr_level old_level = intr_disable ();
+  enum intr_level old_level = intr_disable ();
   if(t == wakeup_thread || t == mlfqs_thread || t == idle_thread)
     return;
   int temp1 = convertN(PRI_MAX);
   int temp2 = div_xn(t->recent_cpu, 4);
   int temp3 = convertN(mult_xn(t->nice, 2));
   int temp = sub_xy(temp1, add_xy(temp2, temp3));
-  temp = convertX_zero(temp);
+  temp = convertX_near(temp);
   t->priority = (temp<PRI_MIN) ? PRI_MIN : (temp>PRI_MAX ? PRI_MAX : temp);
   // update_ready_list();
   // if(t == current_thread() && t != list_front(&ready_list)) thread_yield();
-  // intr_set_level (old_level);
+  intr_set_level (old_level);
 }
 
 /*Function to check if the current thread has high priority. If not yield*/
@@ -839,10 +807,9 @@ mlfqs_reschedule(void)
   struct list_elem *e = list_begin(&all_list);
   for (; e != list_end(&all_list); e = list_next(e))
   {
-    
-    if(e == wakeup_thread || e == mlfqs_thread || e == idle_thread)
-      continue;
     struct thread *t = list_entry (e, struct thread, elem);
+    if(t == wakeup_thread || t == mlfqs_thread || t == idle_thread)
+      continue;
     update_recent_cpu(t);
     update_mlfqs_priority(t);
   }
@@ -858,7 +825,7 @@ update_ready_list(void)
 
 /*Function called when mlfqs thread is running*/
 static void
-mlfqs_thread_work(void *AUX)
+mlfqs_thread_work(void *AUX UNUSED)
 {
   mlfqs_thread = thread_current();
   while(true)
