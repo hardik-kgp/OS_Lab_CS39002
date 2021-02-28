@@ -81,7 +81,7 @@ static struct thread *wakeup_thread;
 static struct thread *mlfqs_thread;
 
 int load_avg;
-static void wake_up_threads(void *aux UNUSED);
+static void wakeup_threads(void *aux UNUSED);
 void update_ready_list(void);
 static bool comp_pri(const struct list_elem *,const struct list_elem *,void *aux UNUSED);
 static void mlfqs_thread_work(void *AUX);
@@ -90,6 +90,7 @@ void increase_recent_cpu(void);
 void cal_load_avg(void);
 void update_recent_cpu(struct thread *);
 void _check_priority(void);
+void mlfqs_update_priority (struct thread *);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -762,7 +763,7 @@ void update_recent_cpu(struct thread *t){
 // for updating the priority of threads in mlfqs
 void mlfqs_update_priority (struct thread *t)
 {
-  if (t == idle_thread || t == wake_up_thread || t == mlfqs_thread) return;
+  if (t == idle_thread || t == wakeup_thread || t == mlfqs_thread) return;
   
   int term1 = convertN (PRI_MAX);
   int term2 = div_xn (t->recent_cpu, 4);
