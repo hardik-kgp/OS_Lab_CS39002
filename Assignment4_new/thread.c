@@ -424,9 +424,10 @@ thread_set_priority (int new_priority)
 {
   struct thread *th = thread_current();
   enum intr_level old_level = intr_disable();
+  th->priority = clip(new_priority, PRI_MIN, PRI_MAX);
   if (!list_empty(&ready_list)){
     struct thread *front = list_entry(list_front(&ready_list), struct thread, elem);
-    if (comp_th_pri(front, thread_current(), NULL)) thread_yield();
+    if (comp_th_pri(front, th, NULL)) thread_yield();
   }
   intr_set_level(old_level);
 }

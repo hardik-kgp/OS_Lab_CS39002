@@ -99,7 +99,8 @@ struct thread
     int nice;                           /* Nice value for a thread */
     int recent_cpu;                     /* Amount of time a thread has used the CPU */
     struct list_elem mlfq_elem;         /* List element for MLFQ Lists */
-    int wakeup_at;
+    int wakeup_at;                      /* For wakeup*/
+    struct list_elem sleepelem;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
