@@ -11,8 +11,7 @@ enum thread_status
     THREAD_RUNNING,     /* Running thread. */
     THREAD_READY,       /* Not running but ready to run. */
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
-    THREAD_DYING,       /* About to be destroyed. */
-    THREAD_SLEEPING     /* Sleeping */
+    THREAD_DYING        /* About to be destroyed. */
   };
 
 /* Thread identifier type.
@@ -24,8 +23,7 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
-#define NICE_MIN -20
-#define NICE_MAX 20
+#define SCALE_FACTOR 100
 
 /* A kernel thread or user process.
 
@@ -92,15 +90,15 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+    struct list_elem blocked_list_elem;           /* list elem for blocked threads */
+
+    int64_t wakeup_at;                  /* Wakeup time */
+    int nice;                           /* nice value */
+    int recent_cpu;                     /*recent cpu time recieved by the thread */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-
-    int nice;                           /* Nice value for a thread */
-    int recent_cpu;                     /* Amount of time a thread has used the CPU */
-    struct list_elem mlfq_elem;         /* List element for MLFQ Lists */
-    int wakeup_at;                      /* For wakeup*/
-    struct list_elem sleepelem;
+    struct list_elem mlfqs_elem;        /* mlfqs list elem */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -110,10 +108,6 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
-
-int load_avg;     /* Stores average value of ready threads */
-bool _update_recent_cpu;
-bool _update_priority;
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -131,8 +125,6 @@ tid_t thread_create (const char *name, int priority, thread_func *, void *);
 
 void thread_block (void);
 void thread_unblock (struct thread *);
-void thread_sleep(void);
-void thread_wakeup(struct thread *);
 
 struct thread *thread_current (void);
 tid_t thread_tid (void);
@@ -152,5 +144,7 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+struct list sleeper_list; // List to store sleeping threads
 
 #endif /* threads/thread.h */
