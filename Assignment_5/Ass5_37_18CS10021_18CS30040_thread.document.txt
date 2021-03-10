@@ -1,0 +1,16 @@
+Group 37
+Name: Hardik Aggarwal
+Roll No : 18CS10021
+
+Name : Sriyash Poddar
+Roll No: 18CS30040
+
+
+Differences between Q1 and Q2 
+
+Algorithms : The Algorithm part is almost the same for both threads and process with the minor differences like initialization of shared memory between threads which we had to explicitly create for processes but for threads a simple global declaration was sufficient. 
+
+Data Structures: The major difference between threads and processes was that in processes we create a shared memory segment while in threads we create a global structure to store the size, priority_queue etc. This is done because threads have a common data segment alloted while processes have different memory spaces. Hence we need shared memory to communicate between different processes.
+
+
+Functions: In Threads each of the function (consumer_process and producer_process) was of type (void *) and were passed producer number and consumer number as arguments. The thread function to run was declared at the time of creation of threads. Also we donot need to pass the process_id of producer and consumer since pid across all the threads is same. 
