@@ -5,10 +5,18 @@ Roll No : 18CS10021
 Name : Sriyash Poddar
 Roll No: 18CS30040
 
+Basic Algorithms and Data Structures used:
+
+Data Structures: 
+We make structures to store the shared memory which keeps track of the attributes like jobs_created, jobs_completed , job_queue etc. We also create a structure that stores the information about a job like pid, producer_number, compute_time etc. We have created functions to push and pop from priority queue.
+
+Algorithms: 
+We first create a shared memory segment to be used by all producers and consumers. We then make NP producers and NC consumers. The producer inserts the job into the priority queue but before pushing jobs it puts a mutex lock and when pushing is completed it removes the lock. This happens in an infine loop untill specified number of jobs have been created. Meanwhile the consumers try to access the job_queue by same procedure of setting the lock and spending the compute_time for a job and increasing the jobs_completed parameter. Finally when all the jobs have been completed we print the total time spent in the whole process. 
+
 
 Differences between Q1 and Q2 
 
-Algorithms : The Algorithm part is almost the same for both threads and process with the minor differences like initialization of shared memory between threads which we had to explicitly create for processes but for threads a simple global declaration was sufficient. 
+Algorithms : The major difference is that instead of forking and creating different process for each consumer and producer , in threads we have a single process which makes different threads to achieve the same objective. Hence we omit the call the function fork() inside main and instead use pthread_create(). The Algorithm part is almost the same for both threads and process with the minor differences like initialization of shared memory between threads which we had to explicitly create for processes but for threads a simple global declaration was sufficient. 
 
 Data Structures: The major difference between threads and processes was that in processes we create a shared memory segment while in threads we create a global structure to store the size, priority_queue etc. This is done because threads have a common data segment alloted while processes have different memory spaces. Hence we need shared memory to communicate between different processes.
 
