@@ -92,7 +92,6 @@ void exit_handler(int status)
 
 int exec_handler(char *fname)
 {
-	acquire_filesys_lock();
 	char * fn_cp = malloc (strlen(fname)+1);
   strlcpy(fn_cp, fname, strlen(fname)+1);
   
@@ -103,13 +102,11 @@ int exec_handler(char *fname)
 
   if(f==NULL)
   {
-    release_filesys_lock();
     return -1;
   }
   else
   {
     file_close(f);
-    release_filesys_lock();
     return process_execute(fname);
   }
 }
