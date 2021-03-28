@@ -139,7 +139,7 @@ process_exit (void)
   if(cur->exit_error == -50)
       exit_handler(-1);
 
-  int exit_code = 0;
+  int exit_code = cur->exit_error;
   printf("%s: exit(%d)\n",cur->name,exit_code);
 
   /* Destroy the current process's page directory and switch back
