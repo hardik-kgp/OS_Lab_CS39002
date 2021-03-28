@@ -118,7 +118,7 @@ process_wait (tid_t child_tid)
     }
   }
 
-  if(child_obj == NULL || child_elem == NULL) return -1;
+  if(!child_obj || !child_elem) return -1;
 
   thread_current()->waiting_child = child_obj->tid;
   if(!child_obj->done)

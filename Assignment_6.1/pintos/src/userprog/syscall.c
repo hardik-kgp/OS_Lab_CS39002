@@ -100,12 +100,10 @@ int exec_handler(char *fname)
 
   struct file* f = filesys_open (fn_cp);
 
-  if(f==NULL)
-  {
+  if(f==NULL) {
     return -1;
   }
-  else
-  {
+  else {
     file_close(f);
     return process_execute(fname);
   }
