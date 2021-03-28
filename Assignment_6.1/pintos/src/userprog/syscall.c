@@ -63,7 +63,7 @@ void check_address(const void *addr)
 {
   struct thread *t = thread_current();
 
-  if(!is_user_vaddr(addr) || !pagedir_get_page(t->pagedir, vaddr)){
+  if(!is_user_vaddr(addr) || !pagedir_get_page(t->pagedir, addr)){
     exit_handler(FAILURE);
   }
 }
@@ -110,6 +110,6 @@ int exec_handler(char *fname)
   {
     file_close(f);
     release_filesys_lock();
-    return exec_handlerute(fname);
+    return process_execute(fname);
   }
 }
