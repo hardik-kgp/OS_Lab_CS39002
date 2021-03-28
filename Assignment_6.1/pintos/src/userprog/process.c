@@ -137,7 +137,7 @@ process_exit (void)
   uint32_t *pd;
 
   if(cur->exit_error == -50)
-      exit_process(-1);
+      exit_handler(-1);
 
   int exit_code = 0;
   printf("%s: exit(%d)\n",cur->name,exit_code);

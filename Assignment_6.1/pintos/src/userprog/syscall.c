@@ -9,8 +9,8 @@
 
 static void syscall_handler (struct intr_frame *);
 void check_address(const void*);
-void process_exit(int);
-int process_exec(char *);
+void exit_handler(int);
+int exec_handler(char *);
 
 extern bool running;
 
@@ -37,13 +37,13 @@ syscall_handler (struct intr_frame *f)
 
     case SYS_EXIT:
       check_address(p+1);
-      process_exit(*(p+1));
+      exit_handler(*(p+1));
       break;
 
     case SYS_EXEC:
-      check_addr(p+1);
-      check_addr(*(p+1));
-      f->eax = process_exec(*(p+1));
+      check_address(p+1);
+      check_address(*(p+1));
+      f->eax = exec_handler(*(p+1));
       break;
 
     case SYS_WRITE:
@@ -64,11 +64,11 @@ void check_address(const void *addr)
   struct thread *t = thread_current();
 
   if(!is_user_vaddr(addr) || !pagedir_get_page(t->pagedir, vaddr)){
-    process_exit(FAILURE);
+    exit_handler(FAILURE);
   }
 }
 
-void process_exit(int status)
+void exit_handler(int status)
 {
   struct list_elem *e;
 
@@ -90,7 +90,7 @@ void process_exit(int status)
 	thread_exit();
 }
 
-int process_exec(char *fname)
+int exec_handler(char *fname)
 {
 	acquire_filesys_lock();
 	char * fn_cp = malloc (strlen(fname)+1);
@@ -110,6 +110,6 @@ int process_exec(char *fname)
   {
     file_close(f);
     release_filesys_lock();
-    return process_execute(fname);
+    return exec_handlerute(fname);
   }
 }
