@@ -96,9 +96,15 @@ struct thread
 
     bool ex;
     int exit_error;
+    
+    struct list child_processes;
     struct thread* parent;
+    
     struct list files;
     int fd_count;
+
+    int waiting_child;
+    struct semaphore child_lock;
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -106,6 +112,13 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+  };
+
+struct child {
+    int tid;
+    struct list_elem elem;
+    int exit_error;
+    bool done;
   };
 
 /* If false (default), use round-robin scheduler.

@@ -43,7 +43,13 @@ process_execute (const char *file_name)
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
+    palloc_free_page (fn_copy);
+  
+  sema_down(&thread_current()->child_lock);
+
+  if(!thread_current()->ex)
+    return -1;
+
   return tid;
 }
 
@@ -65,8 +71,15 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
-    thread_exit ();
+  if (!success) {
+    thread_current()->parent->ex=false;
+    sema_up(&thread_current()->parent->child_lock);
+    thread_exit();
+  }
+  else {
+    thread_current()->parent->ex=true;
+    sema_up(&thread_current()->parent->child_lock);
+  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -88,10 +101,32 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 { 
-  while(!thread_current()->ex);
-  return -1;
+  struct list_elem *e;
+  struct child *child_obj = NULL;
+  struct list_elem *child_elem = NULL;
+
+  for (e = list_begin (&thread_current()->child_processes);
+    e != list_end (&thread_current()->child_processes);
+    e = list_next (e)) {
+
+    struct child *f = list_entry (e, struct child, elem);
+    if(f->tid == child_tid) {
+      child_obj = f;
+      child_elem = e;
+    }
+  }
+
+  if(child_obj == NULL || child_elem == NULL) return -1;
+
+  thread_current()->waiting_child = child_obj->tid;
+  if(!child_obj->done)
+    sema_down(&thread_current()->child_lock);
+
+  int status = child_obj->exit_error;
+  list_remove(child_elem);
+  return status;
 }
 
 /* Free the current process's resources. */
@@ -101,7 +136,10 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
-    int exit_code = 0;
+  if(cur->exit_error == -50)
+      exit_process(-1);
+
+  int exit_code = 0;
   printf("%s: exit(%d)\n",cur->name,exit_code);
 
   /* Destroy the current process's page directory and switch back
@@ -221,6 +259,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   bool success = false;
   int i;
 
+  acquire_filesys_lock();
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
@@ -325,6 +364,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
  done:
   /* We arrive here whether the load is successful or not. */
   file_close (file);
+  release_filesys_lock();
   return success;
 }
 
