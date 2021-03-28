@@ -306,7 +306,7 @@ thread_exit (void)
      when it calls thread_schedule_tail(). */
 
   while(!list_empty(&thread_current()->child_processes)){
-    struct list_elem *e = list_pop_front(&thread_current()->child_proc);
+    struct list_elem *e = list_pop_front(&thread_current()->child_processes);
     struct proc_file *f = list_entry (e, struct child, elem);
     free(f);
   }
