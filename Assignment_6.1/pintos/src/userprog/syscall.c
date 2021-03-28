@@ -58,6 +58,9 @@ syscall_handler (struct intr_frame *f)
       check_address(p+1);
       f->eax = process_wait(*(p+1));
       break;
+    
+    default:
+      exit_handler(-1);
   }
 }
 
