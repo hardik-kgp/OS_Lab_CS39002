@@ -64,7 +64,7 @@ void check_address(const void *addr)
   struct thread *t = thread_current();
 
   if(!is_user_vaddr(addr) || !pagedir_get_page(t->pagedir, addr)){
-    exit_handler(FAILURE);
+    exit_handler(-1);
   }
 }
 
