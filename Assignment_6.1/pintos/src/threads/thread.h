@@ -4,6 +4,8 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include <kernel/list.h>
+#include <threads/synch.h>
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -96,9 +98,15 @@ struct thread
 
     bool ex;
     int exit_error;
-    struct thread* parent;
-    struct list files;
-    int fd_count;
+    
+    struct list child_processes;         /* List to store all child processes*/
+    struct thread* parent;               /* Pointer to parent process*/
+    
+    struct list files;                   /* List containing all open files for the process*/
+    int fd_count;                        /* No. of files open*/
+
+    int waiting_child;                   /* ID of the child it is waiting for*/
+    struct semaphore child_lock;         /* Semaphore to execute block and wakeup for parents*/
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -106,6 +114,14 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+  };
+
+/* Struct contaning information about child known to parent*/
+struct child {
+    int tid;
+    struct list_elem elem;
+    int exit_error;
+    bool done;
   };
 
 /* If false (default), use round-robin scheduler.

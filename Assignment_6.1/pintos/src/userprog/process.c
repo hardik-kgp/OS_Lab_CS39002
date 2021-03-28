@@ -43,7 +43,15 @@ process_execute (const char *file_name)
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
+    palloc_free_page (fn_copy);
+  
+  /*Waiting to avoid this function being completed before the child finishes*/
+  sema_down(&thread_current()->child_lock);
+
+  /* Returns -1 if error encountered in child*/
+  if(!thread_current()->ex)
+    return -1;
+
   return tid;
 }
 
@@ -65,8 +73,16 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
-    thread_exit ();
+  /* Check for successful execution of child process*/
+  if (!success) {
+    thread_current()->parent->ex=false;
+    sema_up(&thread_current()->parent->child_lock);
+    thread_exit();
+  }
+  else {
+    thread_current()->parent->ex=true;
+    sema_up(&thread_current()->parent->child_lock);
+  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -88,10 +104,36 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 { 
-  while(!thread_current()->ex);
-  return -1;
+  /*Function to block the thread till the given child completes execution*/
+  struct list_elem *e;
+  struct child *child_obj = NULL;
+  struct list_elem *child_elem = NULL;
+
+  /*Finding the right child in the child processes list*/
+
+  for (e = list_begin (&thread_current()->child_processes);
+    e != list_end (&thread_current()->child_processes);
+    e = list_next (e)) {
+
+    struct child *f = list_entry (e, struct child, elem);
+    if(f->tid == child_tid) {
+      child_obj = f;
+      child_elem = e;
+    }
+  }
+
+  if(!child_obj || !child_elem) return -1;
+
+  thread_current()->waiting_child = child_obj->tid;
+  if(!child_obj->done) // Adding to semaphore queue child not done
+    sema_down(&thread_current()->child_lock);
+
+  /* Arrives here after child exits, and removes parent from sempahore queue*/
+  int status = child_obj->exit_error;
+  list_remove(child_elem);
+  return status;
 }
 
 /* Free the current process's resources. */
@@ -101,7 +143,11 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
-    int exit_code = 0;
+  /* If same as default value, no status returned i.e. considered as error*/
+  if(cur->exit_error == -50)
+      exit_handler(-1);
+
+  int exit_code = cur->exit_error;
   printf("%s: exit(%d)\n",cur->name,exit_code);
 
   /* Destroy the current process's page directory and switch back
@@ -235,6 +281,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
   fn_cp = strtok_r(fn_cp," ",&save_ptr);
   // printf("File name is %szz\n",fn_cp);
   file = filesys_open (fn_cp);
+
+  free(fn_cp);
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);

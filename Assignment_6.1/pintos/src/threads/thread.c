@@ -8,6 +8,7 @@
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
 #include "threads/palloc.h"
+#include "threads/malloc.h"
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
@@ -184,6 +185,13 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
 
+  /*Adding child to the list of processes in the parent*/
+  struct child *ch = malloc(sizeof(*ch));
+  ch->tid = tid;
+  ch->done = false;
+  ch->exit_error = t->exit_error; 
+  list_push_back(&running_thread()->child_processes, &ch->elem);
+
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
      member cannot be observed. */
@@ -297,6 +305,7 @@ thread_exit (void)
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
+
   intr_disable ();
   list_remove (&thread_current()->allelem);
   thread_current ()->status = THREAD_DYING;
@@ -469,11 +478,15 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-  t->ex = false;
   t->parent  = running_thread();
   list_init(&t->files);
   t->fd_count = 2;
   list_push_back (&all_list, &t->allelem);
+
+  list_init(&t->child_processes);
+  sema_init(&t->child_lock, 0);
+  t->waiting_child = 0;
+  t->exit_error = -50;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
