@@ -53,6 +53,11 @@ syscall_handler (struct intr_frame *f)
         putbuf(*(p + 6), *(p + 7));  
       }
       break;
+
+    case SYS_WAIT:
+      check_address(p+1);
+      f->eax = process_wait(*(p+1));
+      break;
     
     default:
       printf("Default: %d", system_call);
