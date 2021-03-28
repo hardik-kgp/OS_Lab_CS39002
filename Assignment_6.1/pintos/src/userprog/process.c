@@ -274,6 +274,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
   fn_cp = strtok_r(fn_cp," ",&save_ptr);
   // printf("File name is %szz\n",fn_cp);
   file = filesys_open (fn_cp);
+
+  free(fn_cp);
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);

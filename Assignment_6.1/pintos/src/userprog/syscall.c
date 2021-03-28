@@ -5,6 +5,8 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "process.h"
+#include "list.h"
+
 static void syscall_handler (struct intr_frame *);
 void check_address(const void*);
 void process_exit(int);
