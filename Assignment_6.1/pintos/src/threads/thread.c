@@ -185,6 +185,7 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
 
+  /*Adding child to the list of processes in the parent*/
   struct child *ch = malloc(sizeof(*ch));
   ch->tid = tid;
   ch->done = false;

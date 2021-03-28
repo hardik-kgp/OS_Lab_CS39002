@@ -45,8 +45,10 @@ process_execute (const char *file_name)
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
   
+  /*Waiting to avoid this function being completed before the child finishes*/
   sema_down(&thread_current()->child_lock);
 
+  /* Returns -1 if error encountered in child*/
   if(!thread_current()->ex)
     return -1;
 
@@ -71,6 +73,7 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
+  /* Check for successful execution of child process*/
   if (!success) {
     thread_current()->parent->ex=false;
     sema_up(&thread_current()->parent->child_lock);
@@ -103,9 +106,12 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 { 
+  /*Function to block the thread till the given child completes execution*/
   struct list_elem *e;
   struct child *child_obj = NULL;
   struct list_elem *child_elem = NULL;
+
+  /*Finding the right child in the child processes list*/
 
   for (e = list_begin (&thread_current()->child_processes);
     e != list_end (&thread_current()->child_processes);
@@ -121,9 +127,10 @@ process_wait (tid_t child_tid)
   if(!child_obj || !child_elem) return -1;
 
   thread_current()->waiting_child = child_obj->tid;
-  if(!child_obj->done)
+  if(!child_obj->done) // Adding to semaphore queue child not done
     sema_down(&thread_current()->child_lock);
 
+  /* Arrives here after child exits, and removes parent from sempahore queue*/
   int status = child_obj->exit_error;
   list_remove(child_elem);
   return status;
@@ -136,6 +143,7 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
+  /* If same as default value, no status returned i.e. considered as error*/
   if(cur->exit_error == -50)
       exit_handler(-1);
 

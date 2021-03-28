@@ -72,6 +72,7 @@ void check_address(const void *addr)
 
 void exit_handler(int status)
 {
+  /*Function to exit the process, receive the status, and remove parent from semaphore queue*/
   struct list_elem *e;
 
   for (e = list_begin (&thread_current()->parent->child_processes);
@@ -94,6 +95,7 @@ void exit_handler(int status)
 
 int exec_handler(char *fname)
 {
+  /*Function to execute commands in file fname*/
 	char * fn_cp = malloc (strlen(fname)+1);
   strlcpy(fn_cp, fname, strlen(fname)+1);
   
@@ -102,11 +104,11 @@ int exec_handler(char *fname)
 
   struct file* f = filesys_open (fn_cp);
 
-  if(f==NULL) {
+  if(f==NULL) { // File not found
     return -1;
   }
   else {
-    file_close(f);
+    file_close(f); // Execute commands in fname
     return process_execute(fname);
   }
 }
