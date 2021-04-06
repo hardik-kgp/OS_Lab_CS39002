@@ -38,6 +38,8 @@ static struct thread *initial_thread;
 /* Lock used by allocate_tid(). */
 static struct lock tid_lock;
 
+struct lock filesys_lock;
+
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
   {
@@ -93,6 +95,8 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+
+  lock_init(&filesys_lock);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -487,6 +491,7 @@ init_thread (struct thread *t, const char *name, int priority)
   sema_init(&t->child_lock, 0);
   t->waiting_child = 0;
   t->exit_error = -50;
+  t->self = NULL;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -602,3 +607,24 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+void acquire_filesys_lock()
+{
+  lock_acquire(&filesys_lock);
+}
+
+void release_filesys_lock()
+{
+  lock_release(&filesys_lock);
+}
+
+struct _file* search(struct list* files, int fd)
+{
+	struct list_elem *e;
+  for (e = list_begin(files); e != list_end (files);
+        e = list_next (e)) {
+    struct _file *f = list_entry(e, struct _file, elem);
+    if(f->fd == fd) return f;
+  }
+  return NULL;
+}

@@ -150,6 +150,11 @@ process_exit (void)
   int exit_code = cur->exit_error;
   printf("%s: exit(%d)\n",cur->name,exit_code);
 
+  acquire_filesys_lock();
+  file_close(thread_current()->self);
+  all_close_handler(&thread_current()->files);
+  release_filesys_lock();
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -267,6 +272,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   bool success = false;
   int i;
 
+  acquire_filesys_lock();
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
@@ -370,9 +376,13 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   success = true;
 
+  file_deny_write(file);
+  thread_current()->self = file;
+
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
+  // file_close (file);
+  release_filesys_lock();
   return success;
 }
 

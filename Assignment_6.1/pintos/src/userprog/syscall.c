@@ -46,6 +46,83 @@ syscall_handler (struct intr_frame *f)
       f->eax = exec_handler(*(p+1));
       break;
 
+    case SYS_CREATE:
+      check_address(p+5);
+      check_address(*(p+4));
+      acquire_filesys_lock();
+      f->eax = filesys_create(*(p+4),*(p+5));
+      release_filesys_lock();
+      break;
+    
+    case SYS_REMOVE:
+      check_address(p+1);
+      check_address(*(p+1));
+      acquire_filesys_lock();
+      if(filesys_remove(*(p+1))==NULL)
+        f->eax = false;
+      else
+        f->eax = true;
+      release_filesys_lock();
+      break;
+    
+    case SYS_OPEN:
+      check_address(p+1);
+      check_address(*(p+1));
+
+      acquire_filesys_lock();
+      struct file* fptr = filesys_open(*(p+1));
+      release_filesys_lock();
+      if(fptr==NULL)
+        f->eax = -1;
+      else
+      {
+        struct _file *pfile = malloc(sizeof(*pfile));
+        pfile->ptr = fptr;
+        pfile->fd = thread_current()->fd_count;
+        thread_current()->fd_count++;
+        list_push_back (&thread_current()->files, &pfile->elem);
+        f->eax = pfile->fd;
+      }
+      break;
+
+		case SYS_FILESIZE:
+      check_address(p+1);
+      acquire_filesys_lock();
+      f->eax = file_length(search(&thread_current()->files, *(p+1))->ptr);
+      release_filesys_lock();
+		  break;
+
+		case SYS_READ:
+      check_address(p+7);
+      check_address(*(p+6));
+      if(*(p+5)==0)
+      {
+        int i;
+        uint8_t* buffer = *(p+6);
+        for(i=0;i<*(p+7);i++) buffer[i] = input_getc();
+        f->eax = *(p+7);
+      }
+      else
+      {
+        struct _file* fptr = search(&thread_current()->files, *(p+5));
+        if(fptr==NULL)
+          f->eax=-1;
+        else
+        {
+          acquire_filesys_lock();
+          f->eax = file_read(fptr->ptr, *(p+6), *(p+7));
+          release_filesys_lock();
+        }
+      }
+      break;
+
+    case SYS_CLOSE:
+      check_addr(p+1);
+      acquire_filesys_lock();
+      close_handler(&thread_current()->files,*(p+1));
+      release_filesys_lock();
+		break;
+
     case SYS_WRITE:
       // printf("fd : %d | Length : %d\n",*(p+5),*(p+7));
       // printf("buffer: %szz\n",*(p+6));
@@ -114,4 +191,32 @@ int exec_handler(char *fname)
     file_close(f); // Execute commands in fname
     return process_execute(fname);
   }
+}
+
+void close_handler(struct list* files, int fd)
+{
+	struct list_elem *e;
+	struct _file *f;
+  for (e = list_begin (files); e != list_end (files);
+        e = list_next (e)) {
+    f = list_entry(e, struct _file, elem);
+    if(f->fd == fd) {
+      file_close(f->ptr);
+      list_remove(e);
+    }
+  }
+  free(f);
+}
+
+void all_close_handler(struct list* files)
+{
+	struct list_elem *e;
+	while(!list_empty(files))
+	{
+		e = list_pop_front(files);
+		struct _file *f = list_entry(e, struct _file, elem);    
+    file_close(f->ptr);
+    list_remove(e);
+    free(f);
+	}
 }

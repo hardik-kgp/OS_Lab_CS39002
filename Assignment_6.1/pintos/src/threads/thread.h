@@ -104,6 +104,7 @@ struct thread
     
     struct list files;                   /* List containing all open files for the process*/
     int fd_count;                        /* No. of files open*/
+    struct file *self;
 
     int waiting_child;                   /* ID of the child it is waiting for*/
     struct semaphore child_lock;         /* Semaphore to execute block and wakeup for parents*/
@@ -123,6 +124,14 @@ struct child {
     int exit_error;
     bool done;
   };
+
+struct _file {
+    struct file* ptr;
+	 int fd;
+	 struct list_elem elem;
+  };
+
+struct _file* search(struct list* files, int fd);
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
