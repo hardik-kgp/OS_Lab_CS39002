@@ -124,10 +124,23 @@ syscall_handler (struct intr_frame *f)
 		break;
 
     case SYS_WRITE:
-      // printf("fd : %d | Length : %d\n",*(p+5),*(p+7));
-      // printf("buffer: %szz\n",*(p+6));
-      if(*(p + 5) == 1){
-        putbuf(*(p + 6), *(p + 7));  
+      check_address(p+7);
+		  check_address(*(p+6));
+		  if(*(p+5)==1)
+      {
+        putbuf(*(p+6),*(p+7));
+        f->eax = *(p+7);
+      }
+      else
+      {
+        struct _file* fptr = search(&thread_current()->files, *(p+5));
+        if(fptr==NULL)
+          f->eax=-1;
+        else{
+          acquire_filesys_lock();
+          f->eax = file_write (fptr->ptr, *(p+6), *(p+7));
+          release_filesys_lock();
+        }
       }
       break;
 
