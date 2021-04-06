@@ -117,7 +117,7 @@ syscall_handler (struct intr_frame *f)
       break;
 
     case SYS_CLOSE:
-      check_addr(p+1);
+      check_address(p+1);
       acquire_filesys_lock();
       close_handler(&thread_current()->files,*(p+1));
       release_filesys_lock();
